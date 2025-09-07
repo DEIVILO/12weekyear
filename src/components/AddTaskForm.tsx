@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, X, Clock, Calendar, CheckCircle2, Activity, Briefcase, BookOpen, Home, DollarSign, Heart, FileText, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, X, Clock, Calendar, CheckCircle2, Activity, Briefcase, BookOpen, Home, DollarSign, Heart, FileText, AlertTriangle, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,7 +19,7 @@ const taskSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(['low', 'medium', 'high']),
   category: z.string().optional(),
-  frequency: z.enum(['daily', 'weekly', 'once']),
+  frequency: z.enum(['daily', 'weekdays', 'weekends', 'three_times_week', 'twice_week', 'weekly', 'biweekly', 'monthly', 'once']),
   dueDate: z.string().optional(),
 });
 
@@ -45,7 +45,7 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       priority: 'medium',
-      frequency: 'weekly',
+      frequency: 'three_times_week',
     },
   });
 
@@ -66,7 +66,7 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
         category: data.category || undefined,
         frequency: data.frequency,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-        weeklyPlanId,
+        weeklyPlanId: weeklyPlanId,
       });
 
       toast.success('Task created successfully!');
@@ -179,7 +179,7 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
               <label className="text-sm font-medium">Frequency</label>
               <Select
                 value={watch('frequency')}
-                onValueChange={(value: 'daily' | 'weekly' | 'once') => setValue('frequency', value)}
+                onValueChange={(value: 'daily' | 'weekdays' | 'weekends' | 'three_times_week' | 'twice_week' | 'weekly' | 'biweekly' | 'monthly' | 'once') => setValue('frequency', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -191,10 +191,46 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
                       <span>Daily</span>
                     </div>
                   </SelectItem>
+                  <SelectItem value="weekdays">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4" />
+                      <span>Weekdays (Mon-Fri)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="weekends">
+                    <div className="flex items-center gap-2">
+                      <Home className="w-4 h-4" />
+                      <span>Weekends (Sat-Sun)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="three_times_week">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4" />
+                      <span>3x per week</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="twice_week">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>2x per week</span>
+                    </div>
+                  </SelectItem>
                   <SelectItem value="weekly">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       <span>Weekly</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="biweekly">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      <span>Bi-weekly (every 2 weeks)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="monthly">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      <span>Monthly</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="once">

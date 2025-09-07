@@ -40,7 +40,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const { title, description, completed, priority, category } = body;
+    const { title, description, completed, priority, category, frequency } = body;
 
     const task = await prisma.task.update({
       where: { id: params.id },
@@ -50,6 +50,7 @@ export async function PUT(
         completed,
         priority,
         category,
+        frequency,
       },
     });
 

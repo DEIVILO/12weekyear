@@ -29,7 +29,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, description, priority, category, weeklyPlanId } = body;
+    const { title, description, priority, category, frequency, weeklyPlanId } = body;
 
     const task = await prisma.task.create({
       data: {
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
         description,
         priority: priority || 'MEDIUM',
         category,
+        frequency: frequency || 'DAILY',
         weeklyPlanId,
       },
     });

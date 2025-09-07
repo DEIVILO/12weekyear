@@ -12,8 +12,8 @@ datasource db {
 
 model Vision {
   id          String   @id @default(cuid())
-  title       String
-  description String?
+  threeYearVision String? // The 3-year vision statement
+  twelveWeekGoals String? // JSON string of 12-week goals array
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -69,7 +69,13 @@ model Task {
 
 enum Frequency {
   DAILY
+  WEEKDAYS // Monday-Friday
+  WEEKENDS // Saturday-Sunday
+  THREE_TIMES_WEEK // 3x per week
+  TWICE_WEEK // 2x per week
   WEEKLY
+  BIWEEKLY
+  MONTHLY
   ONCE
 }
 
