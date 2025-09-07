@@ -13,8 +13,8 @@ export async function initializeDatabase() {
     if (!existingVision) {
       vision = await prisma.vision.create({
         data: {
-          title: 'My 12 Week Year Journey',
-          description: 'Achieving extraordinary results through focused execution and consistent daily actions.',
+          threeYearVision: 'My 12 Week Year Journey - Achieving extraordinary results through focused execution and consistent daily actions.',
+          twelveWeekGoals: '["Improve physical fitness", "Read 12 books", "Launch personal project"]',
         },
       });
       console.log('Created default vision:', vision.id);
@@ -37,7 +37,7 @@ export async function initializeDatabase() {
           description: 'First quarter focus on health, learning, and productivity',
           startDate,
           endDate,
-          goals: '["Improve physical fitness", "Read 12 books", "Launch personal project"]',
+          goals: JSON.stringify(["Improve physical fitness", "Read 12 books", "Launch personal project"]),
           visionId: vision.id,
         },
       });

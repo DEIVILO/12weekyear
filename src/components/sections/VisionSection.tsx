@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Target, Eye, Edit3, Save, X, Plus, Trash2 } from 'lucide-react';
+import { Target, Eye, Edit3, Save, X, Plus, Trash2, Lightbulb } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,7 +157,10 @@ export function VisionSection({}: VisionSectionProps) {
                     <p>No 3-year vision set yet</p>
                     <p className="text-sm mt-2">Click edit to define your long-term vision</p>
                     <div className="mt-4 p-4 bg-muted/30 rounded-lg text-left">
-                      <p className="text-sm font-medium mb-2">💡 Vision Writing Tips:</p>
+                      <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4" />
+                        Vision Writing Tips:
+                      </p>
                       <ul className="text-xs space-y-1 text-muted-foreground">
                         <li>• Write in present tense as if it's already happened</li>
                         <li>• Be specific about achievements and outcomes</li>
@@ -288,7 +291,10 @@ export function VisionSection({}: VisionSectionProps) {
                     <p>No 12-week goals set yet</p>
                     <p className="text-sm mt-2">Click edit to define your quarterly goals</p>
                     <div className="mt-4 p-4 bg-muted/30 rounded-lg text-left">
-                      <p className="text-sm font-medium mb-2">🎯 Goal Setting Tips:</p>
+                      <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        Goal Setting Tips:
+                      </p>
                       <ul className="text-xs space-y-1 text-muted-foreground">
                         <li>• Choose 2-3 goals maximum (focus is key)</li>
                         <li>• Make them specific and measurable</li>

@@ -173,6 +173,7 @@ export const useStore = create<StoreState>()(
             dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
             lastCompleted: task.lastCompleted ? new Date(task.lastCompleted) : undefined,
             frequency: task.frequency.toLowerCase(), // Convert to lowercase for frontend
+            priority: task.priority.toLowerCase(), // Convert to lowercase for frontend
           }));
 
           set({ tasks: transformedTasks });

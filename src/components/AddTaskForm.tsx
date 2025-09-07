@@ -1,16 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, X, Clock, Calendar, CheckCircle2, Activity, Briefcase, BookOpen, Home, DollarSign, Heart, FileText, AlertTriangle, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
+import { Plus, Clock, Calendar, CheckCircle2, Activity, Briefcase, BookOpen, Home, DollarSign, Heart, FileText, AlertTriangle, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useStore } from '@/store/useStore';
 import { toast } from 'react-hot-toast';
 
@@ -32,7 +31,6 @@ interface AddTaskFormProps {
 
 export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
   const { createTask, isLoading, weeklyPlans } = useStore();
-  const [isOpen, setIsOpen] = useState(false);
 
   const {
     register,
@@ -71,7 +69,6 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
 
       toast.success('Task created successfully!');
       reset();
-      setIsOpen(false);
       onSuccess?.();
     } catch (error) {
       toast.error('Failed to create task');
@@ -81,42 +78,27 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
 
   const handleCancel = () => {
     reset();
-    setIsOpen(false);
     onCancel?.();
   };
 
-  if (!isOpen) {
-    return (
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="w-full hover:scale-105 transition-transform shadow-lg"
-        size="lg"
-      >
-        <Plus className="w-5 h-5 mr-2" />
-        Add New Task
-      </Button>
-    );
-  }
-
   return (
-    <Card className="w-full glass-card animate-fade-in">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          className="w-full hover:scale-105 transition-transform shadow-lg"
+          size="lg"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Add New Task
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-primary" />
             Add New Task
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancel}
-            className="hover:bg-destructive/10 hover:text-destructive"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+          </DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
@@ -125,6 +107,7 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
             </label>
             <Input
               {...register('title')}
+              placeholder="e.g., 'Complete morning workout routine' or 'Review quarterly financial goals'"
               className={errors.title ? 'border-destructive' : ''}
             />
             {errors.title && (
@@ -137,6 +120,7 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
             <label className="text-sm font-medium">Description</label>
             <Textarea
               {...register('description')}
+              placeholder="Describe why this task matters to your 12-week year goals. What impact will it have on your overall progress?"
               rows={3}
             />
           </div>
@@ -331,26 +315,26 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
             </Badge>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 hover:scale-105 transition-transform"
-            >
-              {isLoading ? 'Creating...' : 'Create Task'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-          </div>
         </form>
-      </CardContent>
-    </Card>
+        <DialogFooter className="gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            onClick={handleSubmit(onSubmit)}
+            className="hover:scale-105 transition-transform"
+          >
+            {isLoading ? 'Creating...' : 'Create Task'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

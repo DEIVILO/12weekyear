@@ -6,11 +6,12 @@ const prisma = new PrismaClient();
 // GET /api/tasks/[id] - Get a specific task
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const task = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         weeklyPlan: true,
       },
@@ -36,14 +37,15 @@ export async function GET(
 // PUT /api/tasks/[id] - Update a task
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { title, description, completed, priority, category, frequency } = body;
 
     const task = await prisma.task.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         title,
         description,
@@ -67,11 +69,12 @@ export async function PUT(
 // DELETE /api/tasks/[id] - Delete a task
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await prisma.task.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Task deleted successfully' });

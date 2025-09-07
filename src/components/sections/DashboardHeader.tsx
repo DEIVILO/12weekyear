@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Target, RefreshCw } from 'lucide-react';
+import { Target, RefreshCw, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -66,7 +66,7 @@ export function DashboardHeader({
           Refresh
         </Button>
         <Button variant="outline" size="sm" className="hover:scale-105 transition-transform">
-          <span className="w-4 h-4 mr-2">⚙️</span>
+          <Settings className="w-4 h-4 mr-2" />
           Settings
         </Button>
         <ThemeToggle />

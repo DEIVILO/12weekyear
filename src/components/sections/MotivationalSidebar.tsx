@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Target, TrendingUp, Activity, Briefcase, BookOpen, Home, DollarSign, Heart } from 'lucide-react';
+import { Target, TrendingUp, Activity, Briefcase, BookOpen, Home, DollarSign, Heart, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddTaskForm } from '@/components/AddTaskForm';
 
@@ -177,7 +177,7 @@ export function MotivationalSidebar({ overallProgress, tasks }: MotivationalSide
                       animate={{ rotate: 360 }}
                       transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                     >
-                      ⭐
+                      <Star className="w-5 h-5" />
                     </motion.div>
                     <span className="text-sm font-semibold text-green-800 dark:text-green-200">
                       SUCCESS ACHIEVED!

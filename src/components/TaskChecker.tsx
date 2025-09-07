@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, X, Trophy, Target, AlertCircle, Sparkles, TrendingUp, Clock, Calendar, CheckCircle2 } from 'lucide-react';
+import { Check, X, Trophy, Target, AlertCircle, Sparkles, TrendingUp, Clock, Calendar, CheckCircle2, AlertTriangle, Circle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
@@ -45,11 +45,40 @@ export function TaskChecker({
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'text-red-500 bg-red-50';
-      case 'medium': return 'text-yellow-500 bg-yellow-50';
-      case 'low': return 'text-green-500 bg-green-50';
-      default: return 'text-gray-500 bg-gray-50';
+      case 'high': return 'text-red-600 bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800';
+      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800';
+      case 'low': return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200 dark:bg-gray-950/20 dark:border-gray-800';
     }
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      case 'medium':
+        return <AlertCircle className="w-4 h-4 text-yellow-600" />;
+      case 'low':
+        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+      default:
+        return <Circle className="w-4 h-4 text-gray-600" />;
+    }
+  };
+
+  const getPriorityTitle = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'High Priority';
+      case 'medium': return 'Medium Priority';
+      case 'low': return 'Low Priority';
+      default: return 'Tasks';
+    }
+  };
+
+  // Group tasks by priority
+  const groupedTasks = {
+    high: weekTasks.filter(task => task.priority === 'high'),
+    medium: weekTasks.filter(task => task.priority === 'medium'),
+    low: weekTasks.filter(task => task.priority === 'low'),
   };
 
   const getSuccessIcon = () => {
@@ -208,118 +237,96 @@ export function TaskChecker({
               </div>
             )}
 
-            {/* Tasks List */}
-            <div className="space-y-4">
-              {weekTasks.map((task, index) => (
-                <div
-                  key={task.id}
-                  className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-md animate-fade-in ${
-                    task.completed
-                      ? 'task-completed shadow-lg'
-                      : `task-pending ${getFrequencyColor(task.frequency || 'weekly')}`
-                  }`}
-                  style={{animationDelay: `${index * 0.1}s`}}
-                >
-                  <Checkbox
-                    id={task.id}
-                    checked={task.completed}
-                    onCheckedChange={() => handleTaskToggle(task.id)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <label
-                      htmlFor={task.id}
-                      className={`block font-medium cursor-pointer ${
-                        task.completed ? 'line-through text-muted-foreground' : ''
-                      }`}
-                    >
-                      {task.title}
-                    </label>
-                    {task.description && (
-                      <p className={`text-sm mt-1 ${
-                        task.completed ? 'text-muted-foreground' : 'text-gray-600'
-                      }`}>
-                        {task.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
-                      </Badge>
-                      {task.frequency && (
-                        <Badge variant="outline" className="text-xs">
-                          <div className="flex items-center gap-1">
-                            {getFrequencyIcon(task.frequency)}
-                            <span className="capitalize">{task.frequency}</span>
-                          </div>
-                        </Badge>
-                      )}
-                      {task.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {task.category}
-                        </Badge>
-                      )}
-                      {task.dueDate && (
-                        <span className="text-xs text-muted-foreground">
-                          Due: {new Date(task.dueDate).toLocaleDateString()}
+            {/* Tasks List - Grouped by Priority */}
+            <div className="space-y-6">
+              {['high', 'medium', 'low'].map((priority) => {
+                const priorityTasks = groupedTasks[priority as keyof typeof groupedTasks];
+                if (priorityTasks.length === 0) return null;
+
+                return (
+                  <div key={priority} className="space-y-3">
+                    {/* Priority Header */}
+                    <div className="flex items-center gap-3">
+                      <div className={`px-3 py-1 rounded-full text-sm font-semibold ${getPriorityColor(priority)} border`}>
+                        <span className="flex items-center gap-2">
+                          {getPriorityIcon(priority)}
+                          {getPriorityTitle(priority)}
+                          <span className="bg-white/50 dark:bg-black/30 px-2 py-0.5 rounded-full text-xs font-normal">
+                            {priorityTasks.filter(t => t.completed).length}/{priorityTasks.length}
+                          </span>
                         </span>
-                      )}
+                      </div>
+                    </div>
+
+                    {/* Priority Tasks */}
+                    <div className="space-y-3 ml-4">
+                      {priorityTasks.map((task, index) => (
+                        <div
+                          key={task.id}
+                          className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-md animate-fade-in ${
+                            task.completed
+                              ? 'task-completed shadow-lg bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-800'
+                              : `task-pending ${getFrequencyColor(task.frequency || 'weekly')}`
+                          }`}
+                          style={{animationDelay: `${index * 0.1}s`}}
+                        >
+                          <Checkbox
+                            id={task.id}
+                            checked={task.completed}
+                            onCheckedChange={() => handleTaskToggle(task.id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <label
+                              htmlFor={task.id}
+                              className={`block font-medium cursor-pointer ${
+                                task.completed ? 'line-through text-muted-foreground' : ''
+                              }`}
+                            >
+                              {task.title}
+                            </label>
+                            {task.description && (
+                              <p className={`text-sm mt-1 ${
+                                task.completed ? 'text-muted-foreground' : 'text-gray-600'
+                              }`}>
+                                {task.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
+                                {task.priority}
+                              </Badge>
+                              {task.frequency && (
+                                <Badge variant="outline" className="text-xs">
+                                  <div className="flex items-center gap-1">
+                                    {getFrequencyIcon(task.frequency)}
+                                    <span className="capitalize">{task.frequency}</span>
+                                  </div>
+                                </Badge>
+                              )}
+                              {task.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {task.category}
+                                </Badge>
+                              )}
+                              {task.dueDate && (
+                                <span className="text-xs text-muted-foreground">
+                                  Due: {new Date(task.dueDate).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {task.completed && (
+                            <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" />
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  {task.completed && (
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Summary */}
-            <div className="mt-8 p-6 bg-gradient-to-br from-muted/40 to-muted/20 rounded-2xl border-2 border-dashed border-muted-foreground/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-xl ${
-                    isSuccessful ? 'bg-green-100 dark:bg-green-900/30' :
-                    completionPercentage >= 60 ? 'bg-yellow-100 dark:bg-yellow-900/30' :
-                    'bg-blue-100 dark:bg-blue-900/30'
-                  }`}>
-                    {isSuccessful ? (
-                      <CheckCircle2 className="w-6 h-6 text-green-600" />
-                    ) : (
-                      <Target className="w-6 h-6 text-blue-600" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg">Weekly Summary</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {weekTasks.filter(t => t.completed).length} of {weekTasks.length} tasks completed
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-1">
-                    {Math.round(completionPercentage)}%
-                  </div>
-                  <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                    isSuccessful
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                      : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                  }`}>
-                    {isSuccessful ? 'SUCCESS!' : 'IN PROGRESS'}
-                  </div>
-                </div>
-              </div>
-              {isSuccessful && (
-                <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 text-green-800 dark:text-green-300 rounded-xl border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5" />
-                    <span className="font-semibold">Congratulations!</span>
-                  </div>
-                  <p className="text-sm mt-1">
-                    You've achieved 80%+ completion this week! Keep up the amazing work!
-                  </p>
-                </div>
-              )}
-            </div>
           </>
         )}
       </CardContent>
