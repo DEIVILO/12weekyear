@@ -10,7 +10,10 @@ import {
   MotivationalSidebar,
   LoadingState,
   ErrorState,
-  VisionSection
+  VisionSection,
+  SkeletonCard,
+  SkeletonTaskList,
+  SkeletonWeeklyOverview
 } from '@/components/sections';
 import { useStore } from '@/store/useStore';
 
@@ -107,8 +110,8 @@ export default function Dashboard() {
 
   const selectedWeekTasks = getSelectedWeekTasks();
 
-  // Show loading state
-  if (isLoading && tasks.length === 0) {
+  // Show full loading state only on initial load
+  if (isLoading && tasks.length === 0 && weeklyPlans.length === 0) {
     return <LoadingState />;
   }
 
@@ -148,21 +151,43 @@ export default function Dashboard() {
         <VisionSection />
 
         {/* Overview Cards */}
-        <OverviewCards
-          overallProgress={overallProgress}
-          currentWeek={currentWeek}
-          tasks={tasks}
-        />
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        ) : (
+          <OverviewCards
+            overallProgress={overallProgress}
+            currentWeek={currentWeek}
+            tasks={tasks}
+          />
+        )}
 
         {/* Task Management */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <TaskManagement
-              currentWeek={currentWeek}
-              overallProgress={overallProgress}
-              tasks={tasks}
-              isLoading={isLoading}
-            />
+            {isLoading && tasks.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-6 rounded-2xl"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-6 w-6 bg-muted rounded animate-pulse"></div>
+                  <div className="h-6 bg-muted rounded w-40 animate-pulse"></div>
+                </div>
+                <SkeletonTaskList />
+              </motion.div>
+            ) : (
+              <TaskManagement
+                currentWeek={currentWeek}
+                overallProgress={overallProgress}
+                tasks={tasks}
+                isLoading={isLoading}
+              />
+            )}
           </div>
 
           {/* Motivational Sidebar */}
@@ -173,14 +198,18 @@ export default function Dashboard() {
         </div>
 
         {/* Weekly Overview */}
-        <WeeklyOverview
-          weeklyPlans={weeklyPlans}
-          tasks={tasks}
-          currentWeek={currentWeek}
-          selectedWeek={selectedWeek}
-          onWeekClick={handleWeekClick}
-          onCloseDetails={() => setSelectedWeek(null)}
-        />
+        {isLoading && weeklyPlans.length === 0 ? (
+          <SkeletonWeeklyOverview />
+        ) : (
+          <WeeklyOverview
+            weeklyPlans={weeklyPlans}
+            tasks={tasks}
+            currentWeek={currentWeek}
+            selectedWeek={selectedWeek}
+            onWeekClick={handleWeekClick}
+            onCloseDetails={() => setSelectedWeek(null)}
+          />
+        )}
       </div>
     </motion.div>
   );

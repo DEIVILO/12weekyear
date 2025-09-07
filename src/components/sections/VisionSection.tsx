@@ -130,10 +130,23 @@ export function VisionSection({}: VisionSectionProps) {
                   className="min-h-[120px] resize-none"
                 />
                 <div className="flex gap-2">
-                  <Button onClick={handleSaveVision} size="sm" disabled={isLoading}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Saving...' : 'Save Vision'}
-                  </Button>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button onClick={handleSaveVision} size="sm" disabled={isLoading}>
+                      {isLoading ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full"
+                        />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      {isLoading ? 'Saving...' : 'Save Vision'}
+                    </Button>
+                  </motion.div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -150,7 +163,28 @@ export function VisionSection({}: VisionSectionProps) {
             ) : (
               <div className="space-y-4">
                 {visionText ? (
-                  <p className="text-muted-foreground leading-relaxed">{visionText}</p>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                    className="text-muted-foreground leading-relaxed"
+                  >
+                    {visionText.split(' ').map((word, index) => (
+                      <motion.span
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.3,
+                          delay: 0.5 + index * 0.05,
+                          ease: "easeOut"
+                        }}
+                        className="inline-block mr-1"
+                      >
+                        {word}
+                      </motion.span>
+                    ))}
+                  </motion.p>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Eye className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -254,10 +288,23 @@ export function VisionSection({}: VisionSectionProps) {
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button onClick={handleSaveGoals} size="sm" disabled={isLoading}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Saving...' : 'Save Goals'}
-                  </Button>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button onClick={handleSaveGoals} size="sm" disabled={isLoading}>
+                      {isLoading ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full"
+                        />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      {isLoading ? 'Saving...' : 'Save Goals'}
+                    </Button>
+                  </motion.div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -275,16 +322,49 @@ export function VisionSection({}: VisionSectionProps) {
             ) : (
               <div className="space-y-4">
                 {goals.length > 0 ? (
-                  <div className="space-y-3">
+                  <motion.div
+                    className="space-y-3"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      visible: {
+                        transition: {
+                          staggerChildren: 0.1
+                        }
+                      }
+                    }}
+                  >
                     {goals.map((goal, index) => (
-                      <div key={index} className="flex items-start gap-3">
-                        <Badge variant="outline" className="text-xs mt-1">
-                          {index + 1}
-                        </Badge>
-                        <p className="text-muted-foreground leading-relaxed flex-1">{goal}</p>
-                      </div>
+                      <motion.div
+                        key={index}
+                        variants={{
+                          hidden: { opacity: 0, x: -20 },
+                          visible: {
+                            opacity: 1,
+                            x: 0,
+                            transition: { duration: 0.4, ease: "easeOut" }
+                          }
+                        }}
+                        className="flex items-start gap-3"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Badge variant="outline" className="text-xs mt-1">
+                            {index + 1}
+                          </Badge>
+                        </motion.div>
+                        <motion.p
+                          className="text-muted-foreground leading-relaxed flex-1"
+                          whileHover={{ x: 5 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {goal}
+                        </motion.p>
+                      </motion.div>
                     ))}
-                  </div>
+                  </motion.div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Target className="w-12 h-12 mx-auto mb-4 opacity-50" />

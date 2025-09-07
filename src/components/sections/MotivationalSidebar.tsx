@@ -72,42 +72,98 @@ export function MotivationalSidebar({ overallProgress, tasks }: MotivationalSide
           </CardHeader>
           <CardContent className="space-y-4">
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800"
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800 hover:shadow-md transition-shadow"
             >
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <motion.div
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.7, 1, 0.7]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="w-3 h-3 bg-red-500 rounded-full"
+                ></motion.div>
                 <span className="text-sm font-medium">High Priority</span>
               </div>
-              <span className="font-bold text-red-600">
+              <motion.span
+                key={`${highStats.completed}-${highStats.total}`}
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="font-bold text-red-600"
+              >
                 {highStats.completed}/{highStats.total}
-              </span>
+              </motion.span>
             </motion.div>
 
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="flex justify-between items-center p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex justify-between items-center p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 hover:shadow-md transition-shadow"
             >
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <motion.div
+                  animate={{
+                    scale: [1, 1.15, 1],
+                    opacity: [0.8, 1, 0.8]
+                  }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 0.5
+                  }}
+                  className="w-3 h-3 bg-yellow-500 rounded-full"
+                ></motion.div>
                 <span className="text-sm font-medium">Medium Priority</span>
               </div>
-              <span className="font-bold text-yellow-600">
+              <motion.span
+                key={`${mediumStats.completed}-${mediumStats.total}`}
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="font-bold text-yellow-600"
+              >
                 {mediumStats.completed}/{mediumStats.total}
-              </span>
+              </motion.span>
             </motion.div>
 
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800"
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 hover:shadow-md transition-shadow"
             >
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <motion.div
+                  animate={{
+                    scale: [1, 1.1, 1],
+                    opacity: [0.9, 1, 0.9]
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1
+                  }}
+                  className="w-3 h-3 bg-green-500 rounded-full"
+                ></motion.div>
                 <span className="text-sm font-medium">Low Priority</span>
               </div>
-              <span className="font-bold text-green-600">
+              <motion.span
+                key={`${lowStats.completed}-${lowStats.total}`}
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="font-bold text-green-600"
+              >
                 {lowStats.completed}/{lowStats.total}
-              </span>
+              </motion.span>
             </motion.div>
           </CardContent>
         </Card>
@@ -129,7 +185,15 @@ export function MotivationalSidebar({ overallProgress, tasks }: MotivationalSide
             >
               <motion.div
                 whileHover={{ scale: 1.1, rotate: 5 }}
-                className={`p-3 rounded-full mx-auto mb-4 ${
+                animate={{
+                  y: [0, -5, 0],
+                  rotate: [0, 2, -2, 0]
+                }}
+                transition={{
+                  y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+                }}
+                className={`p-3 rounded-full mx-auto mb-4 relative ${
                   overallProgress >= 80
                     ? 'bg-green-100 dark:bg-green-900/30'
                     : 'bg-blue-100 dark:bg-blue-900/30'
@@ -138,6 +202,21 @@ export function MotivationalSidebar({ overallProgress, tasks }: MotivationalSide
                 <Target className={`w-8 h-8 ${
                   overallProgress >= 80 ? 'text-green-600' : 'text-blue-600'
                 }`} />
+
+                {/* Floating particles around the icon */}
+                {overallProgress >= 80 && (
+                  <motion.div
+                    animate={{
+                      rotate: 360,
+                      scale: [1, 1.2, 1]
+                    }}
+                    transition={{
+                      rotate: { duration: 8, repeat: Infinity, ease: "linear" },
+                      scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    }}
+                    className="absolute inset-0 rounded-full border-2 border-green-300 border-dashed"
+                  />
+                )}
               </motion.div>
 
               <motion.h3

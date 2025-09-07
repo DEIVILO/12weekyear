@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Clock, Calendar, CheckCircle2, Activity, Briefcase, BookOpen, Home, DollarSign, Heart, FileText, AlertTriangle, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ const taskSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(['low', 'medium', 'high']),
   category: z.string().optional(),
+  taskType: z.enum(['recurring', 'week_specific']),
   frequency: z.enum(['daily', 'weekdays', 'weekends', 'three_times_week', 'twice_week', 'weekly', 'biweekly', 'monthly', 'once']),
   dueDate: z.string().optional(),
 });
@@ -28,6 +30,60 @@ interface AddTaskFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
 }
+
+// Animation variants
+const formContainerVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.3,
+      staggerChildren: 0.1,
+      delayChildren: 0.1
+    }
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: { duration: 0.2 }
+  }
+};
+
+const formFieldVariants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+ // easeOut
+    }
+  }
+};
+
+const buttonVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+    }
+  },
+  hover: {
+    scale: 1.05,
+    transition: { duration: 0.2 }
+  },
+  tap: {
+    scale: 0.95
+  }
+};
 
 export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
   const { createTask, isLoading, weeklyPlans } = useStore();
@@ -43,6 +99,7 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       priority: 'medium',
+      taskType: 'week_specific',
       frequency: 'three_times_week',
     },
   });
@@ -62,9 +119,12 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
         completed: false,
         priority: data.priority,
         category: data.category || undefined,
+        taskType: data.taskType,
         frequency: data.frequency,
+        completionCount: 0,
+        completionTarget: 1, // Will be updated by the store based on frequency
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-        weeklyPlanId: weeklyPlanId,
+        weeklyPlanId: data.taskType === 'recurring' ? undefined : weeklyPlanId,
       });
 
       toast.success('Task created successfully!');
@@ -84,49 +144,112 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          className="w-full hover:scale-105 transition-transform shadow-lg"
-          size="lg"
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.2 }}
         >
-          <Plus className="w-5 h-5 mr-2" />
-          Add New Task
-        </Button>
+          <Button
+            className="w-full hover:scale-105 transition-transform shadow-lg"
+            size="lg"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add New Task
+          </Button>
+        </motion.div>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Plus className="w-5 h-5 text-primary" />
-            Add New Task
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Title */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Task Title <span className="text-destructive">*</span>
-            </label>
-            <Input
-              {...register('title')}
-              placeholder="e.g., 'Complete morning workout routine' or 'Review quarterly financial goals'"
-              className={errors.title ? 'border-destructive' : ''}
-            />
-            {errors.title && (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
-            )}
-          </div>
+        <motion.div
+          variants={formContainerVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
+          <DialogHeader>
+            <motion.div variants={formFieldVariants}>
+              <DialogTitle className="flex items-center gap-2">
+                <motion.div
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                >
+                  <Plus className="w-5 h-5 text-primary" />
+                </motion.div>
+                <motion.span
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                >
+                  Add New Task
+                </motion.span>
+              </DialogTitle>
+            </motion.div>
+          </DialogHeader>
+          <motion.form
+            variants={formContainerVariants}
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-6"
+          >
+            {/* Title */}
+            <motion.div variants={formFieldVariants} className="space-y-2">
+              <label className="text-sm font-medium">
+                Task Title <span className="text-destructive">*</span>
+              </label>
+              <Input
+                {...register('title')}
+                placeholder="e.g., 'Complete morning workout routine' or 'Review quarterly financial goals'"
+                className={errors.title ? 'border-destructive' : ''}
+              />
+              {errors.title && (
+                <p className="text-sm text-destructive">{errors.title.message}</p>
+              )}
+            </motion.div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Description</label>
-            <Textarea
-              {...register('description')}
-              placeholder="Describe why this task matters to your 12-week year goals. What impact will it have on your overall progress?"
-              rows={3}
-            />
-          </div>
+            {/* Task Type */}
+            <motion.div variants={formFieldVariants} className="space-y-2">
+              <label className="text-sm font-medium">Task Type</label>
+              <Select
+                value={watch('taskType')}
+                onValueChange={(value: 'recurring' | 'week_specific') => setValue('taskType', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="week_specific">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>Week-Specific Task</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="recurring">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4" />
+                      <span>Recurring Throughout Year</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {watch('taskType') === 'recurring'
+                  ? 'This task will persist across all weeks and track completion over time.'
+                  : 'This task is specific to the current week and will be completed once.'
+                }
+              </p>
+            </motion.div>
 
-          {/* Priority, Frequency and Category */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Description */}
+            <motion.div variants={formFieldVariants} className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                {...register('description')}
+                placeholder="Describe why this task matters to your 12-week year goals. What impact will it have on your overall progress?"
+                rows={3}
+              />
+            </motion.div>
+
+            {/* Priority, Frequency and Category */}
+            <motion.div variants={formFieldVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Priority</label>
               <Select
@@ -279,20 +402,20 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+            </motion.div>
 
-          {/* Due Date */}
-          <div className="space-y-2">
+            {/* Due Date */}
+            <motion.div variants={formFieldVariants} className="space-y-2">
             <label className="text-sm font-medium">Due Date (Optional)</label>
             <Input
               {...register('dueDate')}
               type="date"
               min={new Date().toISOString().split('T')[0]}
             />
-          </div>
+            </motion.div>
 
-          {/* Priority Preview */}
-          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+            {/* Priority Preview */}
+            <motion.div variants={formFieldVariants} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
             <span className="text-sm font-medium">Priority:</span>
             <Badge
               variant="outline"
@@ -313,27 +436,49 @@ export function AddTaskForm({ onSuccess, onCancel }: AddTaskFormProps) {
               )}
               <span>{priority} priority</span>
             </Badge>
-          </div>
+            </motion.div>
 
-        </form>
-        <DialogFooter className="gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading}
-            onClick={handleSubmit(onSubmit)}
-            className="hover:scale-105 transition-transform"
-          >
-            {isLoading ? 'Creating...' : 'Create Task'}
-          </Button>
+          </motion.form>
+          <DialogFooter>
+            <motion.div variants={buttonVariants} className="flex justify-end gap-3 mt-6">
+              <motion.div variants={buttonVariants}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+              </motion.div>
+              <motion.div variants={buttonVariants}>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  onClick={handleSubmit(onSubmit)}
+                  className="hover:scale-105 transition-transform"
+                >
+                  {isLoading ? (
+                    <motion.div
+                      className="flex items-center gap-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-4 h-4 border-2 border-current border-t-transparent rounded-full"
+                      />
+                      Creating...
+                    </motion.div>
+                  ) : (
+                    'Create Task'
+                  )}
+                </Button>
+              </motion.div>
+            </motion.div>
         </DialogFooter>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );

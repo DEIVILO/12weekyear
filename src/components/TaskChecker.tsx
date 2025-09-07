@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, Trophy, Target, AlertCircle, Sparkles, TrendingUp, Clock, Calendar, CheckCircle2, AlertTriangle, Circle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,6 +19,52 @@ interface TaskCheckerProps {
   compact?: boolean;
 }
 
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+const taskVariants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+    }
+  },
+  exit: {
+    opacity: 0,
+    x: -20,
+    transition: {
+      duration: 0.2,
+    }
+  }
+};
+
+const progressVariants = {
+  hidden: { scale: 0.8, opacity: 0 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    transition: {
+      duration: 0.6,
+    }
+  }
+};
+
 export function TaskChecker({
   weekId,
   title = "Daily Tasks",
@@ -25,7 +72,7 @@ export function TaskChecker({
   showSuccessBadge = true,
   compact = false
 }: TaskCheckerProps) {
-  const { tasks, weeklyPlans, toggleTask, getWeeklyCompletion } = useStore();
+  const { tasks, weeklyPlans, toggleTask, getWeeklyCompletion, loadingTasks } = useStore();
 
   // Get tasks for this week or all tasks if no weekId specified
   const weekTasks = weekId
@@ -40,6 +87,8 @@ export function TaskChecker({
   const { completionPercentage, isSuccessful } = useTaskCompletion(weekTasks);
 
   const handleTaskToggle = (taskId: string) => {
+    // Prevent multiple clicks while loading
+    if (loadingTasks.has(taskId)) return;
     toggleTask(taskId);
   };
 
@@ -159,7 +208,12 @@ export function TaskChecker({
   }
 
   return (
-    <Card className="w-full glass-card hover:shadow-xl transition-all duration-300 animate-fade-in">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <Card className="w-full glass-card hover:shadow-xl transition-all duration-300 animate-fade-in">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -203,7 +257,10 @@ export function TaskChecker({
           <>
             {/* Progress Section */}
             {showProgress && (
-              <div className="mb-8 p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-xl border">
+              <motion.div
+                variants={progressVariants}
+                className="mb-8 p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-xl border"
+              >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-semibold flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" />
@@ -234,7 +291,7 @@ export function TaskChecker({
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Tasks List - Grouped by Priority */}
@@ -261,8 +318,15 @@ export function TaskChecker({
                     {/* Priority Tasks */}
                     <div className="space-y-3 ml-4">
                       {priorityTasks.map((task, index) => (
-                        <div
+                        <motion.div
                           key={task.id}
+                          variants={taskVariants}
+                          whileHover={{
+                            scale: 1.02,
+                            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                            transition: { duration: 0.2 }
+                          }}
+                          whileTap={{ scale: 0.98 }}
                           className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-md animate-fade-in ${
                             task.completed
                               ? 'task-completed shadow-lg bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-800'
@@ -270,12 +334,69 @@ export function TaskChecker({
                           }`}
                           style={{animationDelay: `${index * 0.1}s`}}
                         >
-                          <Checkbox
-                            id={task.id}
-                            checked={task.completed}
-                            onCheckedChange={() => handleTaskToggle(task.id)}
-                            className="mt-1"
-                          />
+                          <div className="relative mt-1">
+                            {task.taskType === 'recurring' ? (
+                              // Recurring task: Show progress indicator
+                              <motion.div
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleTaskToggle(task.id)}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    task.completed
+                                      ? 'bg-green-500 border-green-500 text-white'
+                                      : 'border-primary hover:bg-primary/10'
+                                  }`}>
+                                    {task.completed ? (
+                                      <Check className="w-4 h-4" />
+                                    ) : (
+                                      <span className="text-xs font-medium">
+                                        {task.completionCount}/{task.completionTarget}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {task.completionCount > 0 && !task.completed && (
+                                    <div className="flex items-center gap-1">
+                                      <Progress
+                                        value={(task.completionCount / task.completionTarget) * 100}
+                                        className="w-12 h-1"
+                                      />
+                                      <span className="text-xs text-muted-foreground">
+                                        {Math.round((task.completionCount / task.completionTarget) * 100)}%
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            ) : (
+                              // Week-specific task: Show checkbox
+                              <Checkbox
+                                id={task.id}
+                                checked={task.completed}
+                                onCheckedChange={() => handleTaskToggle(task.id)}
+                                disabled={loadingTasks.has(task.id)}
+                                className={`transition-opacity ${
+                                  loadingTasks.has(task.id) ? 'opacity-50' : ''
+                                }`}
+                              />
+                            )}
+
+                            {loadingTasks.has(task.id) && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute inset-0 flex items-center justify-center"
+                              >
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                  className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full"
+                                />
+                              </motion.div>
+                            )}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <label
                               htmlFor={task.id}
@@ -293,21 +414,36 @@ export function TaskChecker({
                               </p>
                             )}
                             <div className="flex items-center gap-2 mt-2 flex-wrap">
-                              <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
-                                {task.priority}
-                              </Badge>
-                              {task.frequency && (
-                                <Badge variant="outline" className="text-xs">
-                                  <div className="flex items-center gap-1">
-                                    {getFrequencyIcon(task.frequency)}
-                                    <span className="capitalize">{task.frequency}</span>
-                                  </div>
+                              <motion.div
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)} transition-colors`}>
+                                  {task.priority}
                                 </Badge>
+                              </motion.div>
+                              {task.frequency && (
+                                <motion.div
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  <Badge variant="outline" className="text-xs transition-colors">
+                                    <div className="flex items-center gap-1">
+                                      {getFrequencyIcon(task.frequency)}
+                                      <span className="capitalize">{task.frequency}</span>
+                                    </div>
+                                  </Badge>
+                                </motion.div>
                               )}
                               {task.category && (
-                                <Badge variant="outline" className="text-xs">
-                                  {task.category}
-                                </Badge>
+                                <motion.div
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  <Badge variant="outline" className="text-xs transition-colors">
+                                    {task.category}
+                                  </Badge>
+                                </motion.div>
                               )}
                               {task.dueDate && (
                                 <span className="text-xs text-muted-foreground">
@@ -316,10 +452,62 @@ export function TaskChecker({
                               )}
                             </div>
                           </div>
-                          {task.completed && (
-                            <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" />
+                            {task.completed && (
+                            <motion.div
+                              initial={{ scale: 0, rotate: -180 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              transition={{
+                                type: "spring",
+                                stiffness: 300,
+                                delay: 0.1,
+                                damping: 20
+                              }}
+                              className="relative"
+                            >
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: [0, 1.2, 1] }}
+                                transition={{
+                                  duration: 0.6,
+                                  delay: 0.2,
+                                  ease: "easeOut"
+                                }}
+                                className="absolute inset-0 bg-green-400/20 rounded-full"
+                              />
+                              <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-1 relative z-10" />
+
+                              {/* Celebration particles */}
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: [0, 1, 0] }}
+                                transition={{ duration: 0.8, delay: 0.3 }}
+                                className="absolute inset-0 pointer-events-none"
+                              >
+                                {[...Array(6)].map((_, i) => (
+                                  <motion.div
+                                    key={i}
+                                    initial={{ scale: 0, x: 0, y: 0 }}
+                                    animate={{
+                                      scale: [0, 1, 0],
+                                      x: [0, (i - 3) * 8],
+                                      y: [0, -20]
+                                    }}
+                                    transition={{
+                                      duration: 0.6,
+                                      delay: 0.4 + i * 0.1,
+                                      ease: "easeOut"
+                                    }}
+                                    className="absolute w-1 h-1 bg-green-400 rounded-full"
+                                    style={{
+                                      left: '50%',
+                                      top: '50%',
+                                    }}
+                                  />
+                                ))}
+                              </motion.div>
+                            </motion.div>
                           )}
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </div>
@@ -331,5 +519,6 @@ export function TaskChecker({
         )}
       </CardContent>
     </Card>
+    </motion.div>
   );
 }

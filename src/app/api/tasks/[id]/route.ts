@@ -42,17 +42,20 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, description, completed, priority, category, frequency } = body;
+    const { title, description, completed, priority, category, frequency, lastCompleted } = body;
 
     const task = await prisma.task.update({
       where: { id },
       data: {
-        title,
-        description,
-        completed,
-        priority,
-        category,
-        frequency,
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { description }),
+        ...(completed !== undefined && { completed }),
+        ...(priority !== undefined && { priority }),
+        ...(category !== undefined && { category }),
+        ...(frequency !== undefined && { frequency }),
+        ...(lastCompleted !== undefined && {
+          lastCompleted: lastCompleted === null ? null : lastCompleted
+        }),
       },
     });
 

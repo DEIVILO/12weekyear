@@ -28,8 +28,11 @@ export interface Task {
   priority: 'high' | 'medium' | 'low';
   category?: string;
   frequency: 'daily' | 'weekdays' | 'weekends' | 'three_times_week' | 'twice_week' | 'weekly' | 'biweekly' | 'monthly' | 'once';
+  taskType: 'recurring' | 'week_specific';
+  completionCount: number; // For recurring tasks: how many times completed this week
+  completionTarget: number; // For recurring tasks: target completions per week
   lastCompleted?: Date;
-  weeklyPlanId: string;
+  weeklyPlanId?: string; // Optional for recurring tasks
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +77,7 @@ interface StoreState {
   vision: Vision | null;
   isLoading: boolean;
   error: string | null;
+  loadingTasks: Set<string>; // Track which tasks are currently being updated
 
   // Actions
   setCurrentPlan: (plan: TwelveWeekPlan | null) => void;
@@ -91,6 +95,7 @@ interface StoreState {
   updateVision: (vision: string, goals: string[]) => Promise<void>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setTaskLoading: (taskId: string, loading: boolean) => void;
 
   // Computed values
   getWeeklyCompletion: (weekId: string) => { percentage: number; isSuccessful: boolean };
@@ -107,6 +112,7 @@ export const useStore = create<StoreState>()(
       vision: null,
       isLoading: false,
       error: null,
+      loadingTasks: new Set<string>(),
 
       setCurrentPlan: (plan) => set({ currentPlan: plan }),
 
@@ -136,11 +142,50 @@ export const useStore = create<StoreState>()(
         try {
           set({ isLoading: true, error: null });
 
+          // Set completionTarget based on frequency for recurring tasks
+          let completionTarget = 1;
+          if (taskData.taskType === 'recurring') {
+            switch (taskData.frequency) {
+              case 'daily':
+                completionTarget = 7; // 7 days per week
+                break;
+              case 'weekdays':
+                completionTarget = 5; // Mon-Fri
+                break;
+              case 'weekends':
+                completionTarget = 2; // Sat-Sun
+                break;
+              case 'three_times_week':
+                completionTarget = 3;
+                break;
+              case 'twice_week':
+                completionTarget = 2;
+                break;
+              case 'weekly':
+                completionTarget = 1;
+                break;
+              case 'biweekly':
+                completionTarget = 1; // Every 2 weeks = 0.5 per week, but we track as 1 completion
+                break;
+              case 'monthly':
+                completionTarget = 1; // Once per month = ~0.25 per week, but we track as 1 completion
+                break;
+              case 'once':
+                completionTarget = 1;
+                break;
+            }
+          }
+
           // Convert frequency to uppercase for API
           const apiData = {
             ...taskData,
             priority: taskData.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH',
             frequency: taskData.frequency.toUpperCase() as 'DAILY' | 'WEEKLY' | 'ONCE',
+            taskType: taskData.taskType.toUpperCase() as 'RECURRING' | 'WEEK_SPECIFIC',
+            completionTarget,
+            completionCount: 0,
+            // For recurring tasks, don't set weeklyPlanId
+            weeklyPlanId: taskData.taskType === 'recurring' ? undefined : taskData.weeklyPlanId,
           };
 
           const newTask = await apiRequest('/tasks', {
@@ -174,6 +219,9 @@ export const useStore = create<StoreState>()(
             lastCompleted: task.lastCompleted ? new Date(task.lastCompleted) : undefined,
             frequency: task.frequency.toLowerCase(), // Convert to lowercase for frontend
             priority: task.priority.toLowerCase(), // Convert to lowercase for frontend
+            taskType: task.taskType.toLowerCase(), // Convert to lowercase for frontend
+            completionCount: task.completionCount || 0,
+            completionTarget: task.completionTarget || 1,
           }));
 
           set({ tasks: transformedTasks });
@@ -236,66 +284,44 @@ export const useStore = create<StoreState>()(
 
       toggleTask: async (id) => {
         try {
-          set({ isLoading: true, error: null });
+          get().setTaskLoading(id, true);
+          set({ error: null });
 
           // Get current task
           const currentTask = get().tasks.find(t => t.id === id);
           if (!currentTask) return;
 
           const now = new Date();
-          let newCompleted: boolean;
-          let lastCompleted: Date | undefined;
+          let updates: any = {};
 
-          // Handle frequency-based completion logic
-          if (currentTask.frequency === 'daily') {
-            // For daily tasks, toggle normally and update lastCompleted
-            newCompleted = !currentTask.completed;
-            lastCompleted = newCompleted ? now : undefined;
-          } else if (currentTask.frequency === 'weekdays') {
-            // For weekday tasks (Mon-Fri), toggle normally
-            newCompleted = !currentTask.completed;
-            lastCompleted = newCompleted ? now : undefined;
-          } else if (currentTask.frequency === 'weekends') {
-            // For weekend tasks (Sat-Sun), toggle normally
-            newCompleted = !currentTask.completed;
-            lastCompleted = newCompleted ? now : undefined;
-          } else if (currentTask.frequency === 'three_times_week' || currentTask.frequency === 'twice_week') {
-            // For flexible weekly tasks, toggle normally
-            newCompleted = !currentTask.completed;
-            lastCompleted = newCompleted ? now : undefined;
-          } else if (currentTask.frequency === 'weekly') {
-            // For weekly tasks, toggle normally
-            newCompleted = !currentTask.completed;
-            lastCompleted = newCompleted ? now : undefined;
-          } else if (currentTask.frequency === 'biweekly') {
-            // For bi-weekly tasks, toggle normally
-            newCompleted = !currentTask.completed;
-            lastCompleted = newCompleted ? now : undefined;
-          } else if (currentTask.frequency === 'monthly') {
-            // For monthly tasks, toggle normally
-            newCompleted = !currentTask.completed;
-            lastCompleted = newCompleted ? now : undefined;
-          } else if (currentTask.frequency === 'once') {
-            // For one-time tasks, can only be completed once
+          if (currentTask.taskType === 'recurring') {
+            // For recurring tasks: increment/decrement completion count
             if (currentTask.completed) {
-              // If already completed, don't allow unchecking
+              // Unchecking: decrement count
+              updates.completionCount = Math.max(0, currentTask.completionCount - 1);
+              updates.completed = updates.completionCount >= currentTask.completionTarget;
+              updates.lastCompleted = null;
+            } else {
+              // Checking: increment count
+              updates.completionCount = currentTask.completionCount + 1;
+              updates.completed = updates.completionCount >= currentTask.completionTarget;
+              updates.lastCompleted = now.toISOString();
+            }
+          } else {
+            // For week-specific tasks: use old logic
+            if (currentTask.frequency === 'once' && currentTask.completed) {
+              // One-time tasks can't be unchecked
               return;
             }
-            newCompleted = true;
-            lastCompleted = now;
-          } else {
-            // Default case: toggle normally
-            newCompleted = !currentTask.completed;
-            lastCompleted = newCompleted ? now : undefined;
+
+            updates.completed = !currentTask.completed;
+            updates.lastCompleted = updates.completed ? now.toISOString() : null;
           }
 
           // API call to update task
           const updatedTask = await apiRequest(`/tasks/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({
-              completed: newCompleted,
-              lastCompleted: lastCompleted?.toISOString(),
-            }),
+            body: JSON.stringify(updates),
           });
 
           // Update local state
@@ -306,24 +332,41 @@ export const useStore = create<StoreState>()(
 
             // Update weekly plan completion when task is toggled
             const weeklyPlan = state.weeklyPlans.find(plan =>
-              plan.tasks.some(t => t.id === id)
+              plan.tasks.some(t => t.id === id) || // Week-specific tasks
+              (updatedTask.taskType === 'recurring' && plan.weekNumber === getCurrentWeekNumber()) // Recurring tasks for current week
             );
 
             if (weeklyPlan) {
-              const weeklyTasks = updatedTasks.filter(t =>
-                weeklyPlan.tasks.some(wt => wt.id === t.id)
-              );
+              // Get all tasks for this week (both recurring and week-specific)
+              const weeklyTasks = updatedTasks.filter(task => {
+                if (task.taskType === 'week_specific') {
+                  // Include week-specific tasks that belong to this plan
+                  return weeklyPlan.tasks.some(wt => wt.id === task.id);
+                } else {
+                  // Include recurring tasks for the current week
+                  return task.taskType === 'recurring';
+                }
+              });
 
               // Calculate weighted completion for the weekly plan
               let totalWeight = 0;
               let completedWeight = 0;
 
               for (const task of weeklyTasks) {
-                const weight = calculateTaskWeight(task.frequency || 'weekly');
-                totalWeight += weight;
+                if (task.taskType === 'recurring') {
+                  // For recurring tasks, use completion progress
+                  const progressRatio = task.completionCount / task.completionTarget;
+                  const weight = calculateTaskWeight(task.frequency || 'weekly');
+                  totalWeight += weight;
+                  completedWeight += weight * Math.min(progressRatio, 1); // Cap at 100%
+                } else {
+                  // For week-specific tasks, use binary completion
+                  const weight = calculateTaskWeight(task.frequency || 'weekly');
+                  totalWeight += weight;
 
-                if (task.completed) {
-                  completedWeight += weight;
+                  if (task.completed) {
+                    completedWeight += weight;
+                  }
                 }
               }
 
@@ -347,12 +390,22 @@ export const useStore = create<StoreState>()(
         } catch (error) {
           set({ error: error instanceof Error ? error.message : 'Failed to toggle task' });
         } finally {
-          set({ isLoading: false });
+          get().setTaskLoading(id, false);
         }
       },
 
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
+      setTaskLoading: (taskId, loading) =>
+        set((state) => {
+          const newLoadingTasks = new Set(state.loadingTasks);
+          if (loading) {
+            newLoadingTasks.add(taskId);
+          } else {
+            newLoadingTasks.delete(taskId);
+          }
+          return { loadingTasks: newLoadingTasks };
+        }),
 
       getWeeklyCompletion: (weekId) => {
         const state = get();
@@ -406,11 +459,13 @@ export const useStore = create<StoreState>()(
           today.setHours(0, 0, 0, 0); // Start of today
 
           const tasksToReset = state.tasks.filter(task => {
-            if (!task.lastCompleted || !task.completed) return false;
+            // Only process recurring tasks that have been completed
+            if (task.taskType !== 'recurring' || !task.lastCompleted) return false;
 
             const lastCompletedDate = new Date(task.lastCompleted);
             lastCompletedDate.setHours(0, 0, 0, 0);
 
+            // Check if task should be reset based on frequency
             switch (task.frequency) {
               case 'daily':
                 // Reset daily tasks that were completed before today
@@ -458,18 +513,24 @@ export const useStore = create<StoreState>()(
             }
           });
 
-          // Reset each task
+          // Reset each recurring task
           for (const task of tasksToReset) {
+            // For recurring tasks, we decrement the completion count instead of resetting to 0
+            // This preserves progress while allowing daily resets
+            const newCompletionCount = Math.max(0, task.completionCount - 1);
+            const newCompleted = newCompletionCount >= task.completionTarget;
+
             await apiRequest(`/tasks/${task.id}`, {
               method: 'PUT',
               body: JSON.stringify({
-                completed: false,
-                lastCompleted: null,
+                completed: newCompleted,
+                completionCount: newCompletionCount,
+                lastCompleted: null, // Reset last completed to allow re-completion today
               }),
             });
           }
 
-          console.log(`Reset ${tasksToReset.length} tasks based on their frequency`);
+          console.log(`Reset ${tasksToReset.length} recurring tasks based on their frequency`);
         } catch (error) {
           console.error('Error resetting tasks:', error);
         }
@@ -519,6 +580,14 @@ export const useStore = create<StoreState>()(
     }
   )
 );
+
+// Helper function to get current week number
+const getCurrentWeekNumber = (): number => {
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const daysSinceStartOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.ceil((daysSinceStartOfYear + startOfYear.getDay() + 1) / 7);
+};
 
 // Helper functions for task completion with frequency-based weighting
 export const calculateTaskWeight = (frequency: string): number => {

@@ -59,12 +59,15 @@ model Task {
   priority    Priority @default(MEDIUM)
   category    String?
   frequency   Frequency @default(WEEKLY)
+  taskType    TaskType @default(WEEK_SPECIFIC) // RECURRING or WEEK_SPECIFIC
+  completionCount Int    @default(0) // For recurring tasks: how many times completed this week
+  completionTarget Int   @default(1) // For recurring tasks: target completions per week
   lastCompleted DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  weeklyPlanId String
-  weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id])
+  weeklyPlanId String?
+  weeklyPlan   WeeklyPlan? @relation(fields: [weeklyPlanId], references: [id])
 }
 
 enum Frequency {
@@ -83,4 +86,9 @@ enum Priority {
   LOW
   MEDIUM
   HIGH
+}
+
+enum TaskType {
+  RECURRING    // Task persists across weeks
+  WEEK_SPECIFIC // Task is specific to one week
 }
