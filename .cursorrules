@@ -1,0 +1,303 @@
+# 12 Week Year Planner - Cursor Rules
+
+## Project Overview
+This is a local-only 12 Week Year planner application built with Next.js 15, TypeScript, and shadcn/ui. The app helps users achieve their goals through focused 12-week execution periods with simple task checking and progress tracking.
+
+## Tech Stack
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **Icons**: Lucide React
+- **Database**: SQLite with Prisma ORM
+- **State Management**: Zustand
+- **Forms**: React Hook Form with Zod validation
+- **Animations**: Framer Motion (via Aceternity)
+- **Charts**: Recharts
+- **Notifications**: React Hot Toast
+- **Date Handling**: date-fns
+
+## Code Style & Conventions
+
+### TypeScript
+- Use strict TypeScript configuration
+- Define proper interfaces for all data structures
+- Use type guards and proper error handling
+- Prefer `interface` over `type` for object shapes
+- Use generic types where appropriate
+
+### React/Next.js
+- Use functional components with hooks
+- Implement proper error boundaries
+- Use Next.js 15 App Router patterns
+- Implement proper loading and error states
+- Use React.memo for performance optimization when needed
+- Prefer server components when possible, use client components only when necessary
+
+### Component Structure
+- Use shadcn/ui components as the base
+- Create custom components that extend shadcn/ui
+- Follow atomic design principles (atoms, molecules, organisms)
+- Use proper prop typing with interfaces
+- Implement proper accessibility (ARIA labels, keyboard navigation)
+
+### Styling
+- Use Tailwind CSS utility classes
+- Follow mobile-first responsive design
+- Use CSS variables for theming
+- Implement dark/light mode support
+- Use shadcn/ui design tokens
+
+### File Organization
+```
+src/
+├── app/                 # Next.js App Router
+├── components/          # Reusable components
+│   ├── ui/             # shadcn/ui components
+│   ├── forms/          # Form components
+│   ├── charts/         # Chart components
+│   └── layout/         # Layout components
+├── lib/                # Utility functions
+├── hooks/              # Custom React hooks
+├── store/              # Zustand stores
+├── types/              # TypeScript type definitions
+└── utils/              # Helper functions
+```
+
+## Key Features Implementation
+
+### Task Checker System
+- Simple checkmark interface for daily/weekly tasks
+- Real-time percentage calculation
+- 80%+ completion rate marks weekly success
+- Visual indicators for success/failure states
+- Progress bars and completion animations
+
+### 12 Week Year Methodology
+- Vision statement creation
+- Annual goal setting (2-3 goals max)
+- 12-week plan breakdown
+- Weekly tactics planning
+- Daily action items
+- Weekly accountability reviews
+
+### Data Models
+```typescript
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  dueDate: Date;
+  priority: 'high' | 'medium' | 'low';
+  category: string;
+}
+
+interface WeeklyPlan {
+  id: string;
+  weekNumber: number;
+  startDate: Date;
+  endDate: Date;
+  tasks: Task[];
+  completionPercentage: number;
+  isSuccessful: boolean; // 80%+ threshold
+}
+
+interface TwelveWeekPlan {
+  id: string;
+  title: string;
+  description: string;
+  startDate: Date;
+  endDate: Date;
+  goals: string[];
+  weeklyPlans: WeeklyPlan[];
+  overallProgress: number;
+}
+```
+
+## Development Guidelines
+
+### Performance
+- Use React.memo for expensive components
+- Implement proper loading states
+- Use dynamic imports for code splitting
+- Optimize images with Next.js Image component
+- Implement proper caching strategies
+
+### Accessibility
+- Use semantic HTML elements
+- Implement proper ARIA labels
+- Ensure keyboard navigation
+- Use proper color contrast ratios
+- Test with screen readers
+
+### Error Handling
+- Implement error boundaries
+- Use proper try-catch blocks
+- Provide meaningful error messages
+- Log errors appropriately
+- Graceful degradation
+
+### Testing
+- Write unit tests for utility functions
+- Test component behavior
+- Mock external dependencies
+- Test accessibility features
+- Implement integration tests
+
+## Database Schema (Prisma)
+
+```prisma
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  visions        Vision[]
+  twelveWeekPlans TwelveWeekPlan[]
+}
+
+model Vision {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model TwelveWeekPlan {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  startDate   DateTime
+  endDate     DateTime
+  goals       String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  
+  weeklyPlans WeeklyPlan[]
+}
+
+model WeeklyPlan {
+  id                   String   @id @default(cuid())
+  weekNumber          Int
+  startDate           DateTime
+  endDate             DateTime
+  completionPercentage Float    @default(0)
+  isSuccessful        Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  twelveWeekPlanId String
+  twelveWeekPlan   TwelveWeekPlan @relation(fields: [twelveWeekPlanId], references: [id])
+  
+  tasks Task[]
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  completed   Boolean  @default(false)
+  dueDate     DateTime
+  priority    Priority @default(MEDIUM)
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  weeklyPlanId String
+  weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id])
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+```
+
+## API Routes Structure
+- `/api/visions` - Vision management
+- `/api/twelve-week-plans` - 12-week plan management
+- `/api/weekly-plans` - Weekly plan management
+- `/api/tasks` - Task management
+- `/api/analytics` - Progress analytics
+
+## Environment Variables
+```env
+DATABASE_URL="file:./dev.db"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+## Code Quality
+- Use ESLint and Prettier
+- Follow consistent naming conventions
+- Write self-documenting code
+- Use meaningful variable and function names
+- Keep functions small and focused
+- Avoid deep nesting
+
+## Security
+- Validate all inputs with Zod
+- Sanitize user data
+- Use proper error handling
+- Implement rate limiting for API routes
+- Secure local storage usage
+
+## Deployment
+- Build for local usage only
+- Use SQLite for data persistence
+- No external services required
+- Optimize bundle size
+- Test on different screen sizes
+
+## Common Patterns
+
+### Custom Hooks
+```typescript
+// useTaskCompletion.ts
+export const useTaskCompletion = (tasks: Task[]) => {
+  const completionPercentage = useMemo(() => {
+    if (tasks.length === 0) return 0;
+    const completed = tasks.filter(task => task.completed).length;
+    return (completed / tasks.length) * 100;
+  }, [tasks]);
+
+  const isSuccessful = completionPercentage >= 80;
+
+  return { completionPercentage, isSuccessful };
+};
+```
+
+### Component Patterns
+```typescript
+// TaskChecker.tsx
+interface TaskCheckerProps {
+  tasks: Task[];
+  onTaskToggle: (taskId: string) => void;
+  showProgress?: boolean;
+}
+
+export const TaskChecker: React.FC<TaskCheckerProps> = ({
+  tasks,
+  onTaskToggle,
+  showProgress = true
+}) => {
+  // Implementation
+};
+```
+
+## Notes
+- This is a local-only application - no authentication needed
+- Focus on simplicity and ease of use
+- Prioritize the 80% success threshold feature
+- Use shadcn/ui components consistently
+- Implement proper TypeScript typing throughout
+- Follow Next.js 15 best practices
