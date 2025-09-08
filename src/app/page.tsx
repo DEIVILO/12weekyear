@@ -40,42 +40,56 @@ export default function Dashboard() {
   // Load data from API on component mount
   useEffect(() => {
     const loadData = async () => {
+      console.log('🔄 Page refresh detected, loading fresh data...');
+
       try {
-        // Load tasks and weekly plans from API
+        // First check if we have any data from localStorage
+        const currentTasks = tasks.length;
+        const currentPlans = weeklyPlans.length;
+        console.log(`📊 Current localStorage data: ${currentTasks} tasks, ${currentPlans} plans`);
+
+        // Load fresh data from API
+        console.log('🌐 Loading fresh data from API...');
         await Promise.all([
-          useStore.getState().loadTasks(),
-          useStore.getState().loadWeeklyPlans(),
-          useStore.getState().loadVision(),
+          loadTasks(),
+          loadWeeklyPlans(),
+          loadVision(),
         ]);
 
         // Reset daily tasks if needed
-        await useStore.getState().resetDailyTasks();
+        console.log('🔄 Resetting daily tasks...');
+        await resetDailyTasks();
 
-        // Initialize database if no tasks exist
-        const tasks = useStore.getState().tasks;
-        const weeklyPlans = useStore.getState().weeklyPlans;
+        // Check if we need to initialize database after loading
+        const updatedTasks = useStore.getState().tasks;
+        const updatedPlans = useStore.getState().weeklyPlans;
+        console.log(`📊 After API load: ${updatedTasks.length} tasks, ${updatedPlans.length} plans`);
 
-        if (tasks.length === 0 || weeklyPlans.length === 0) {
-          console.log('No data found, initializing database...');
+        // Only initialize if we still have no data after API calls
+        if (updatedTasks.length === 0 && updatedPlans.length === 0) {
+          console.log('🗄️ No data found after API load, initializing database...');
           try {
             await fetch('/api/init');
             // Reload data after initialization
             await Promise.all([
-              useStore.getState().loadTasks(),
-              useStore.getState().loadWeeklyPlans(),
-              useStore.getState().loadVision(),
+              loadTasks(),
+              loadWeeklyPlans(),
+              loadVision(),
             ]);
+            console.log('✅ Database initialization complete');
           } catch (error) {
-            console.error('Failed to initialize database:', error);
+            console.error('❌ Failed to initialize database:', error);
           }
+        } else {
+          console.log('✅ Fresh data loaded successfully, no initialization needed');
         }
       } catch (error) {
-        console.error('Failed to load data:', error);
+        console.error('❌ Failed to load data:', error);
       }
     };
 
     loadData();
-  }, []);
+  }, [loadTasks, loadWeeklyPlans, loadVision, resetDailyTasks, tasks.length, weeklyPlans.length]);
 
   const getCurrentDateRange = () => {
     const today = new Date();

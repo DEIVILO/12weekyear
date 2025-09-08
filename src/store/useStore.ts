@@ -114,6 +114,16 @@ export const useStore = create<StoreState>()(
       error: null,
       loadingTasks: new Set<string>(),
 
+      // Clear persisted data when loading fresh data from API
+      clearPersistedData: () => {
+        set({
+          currentPlan: null,
+          weeklyPlans: [],
+          tasks: [],
+          vision: null,
+        });
+      },
+
       setCurrentPlan: (plan) => set({ currentPlan: plan }),
 
       addWeeklyPlan: (plan) =>
@@ -210,6 +220,9 @@ export const useStore = create<StoreState>()(
 
           const tasks = await apiRequest('/tasks');
 
+          // Clear any existing task data first to avoid conflicts
+          set({ tasks: [] });
+
           // Transform dates from API response
           const transformedTasks = tasks.map((task: any) => ({
             ...task,
@@ -237,6 +250,9 @@ export const useStore = create<StoreState>()(
           set({ isLoading: true, error: null });
 
           const weeklyPlans = await apiRequest('/weekly-plans');
+
+          // Clear any existing weekly plan data first to avoid conflicts
+          set({ weeklyPlans: [] });
 
           // Transform dates from API response
           const transformedPlans = weeklyPlans.map((plan: any) => ({
@@ -541,6 +557,10 @@ export const useStore = create<StoreState>()(
         try {
           set({ isLoading: true, error: null });
           const visionData = await apiRequest('/vision');
+
+          // Clear any existing vision data first to avoid conflicts
+          set({ vision: null });
+
           set({ vision: visionData });
         } catch (error) {
           console.error('Error loading vision:', error);
@@ -571,12 +591,22 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: '12weekyear-storage',
+      // Only persist the core data, not loading states or errors
       partialize: (state) => ({
         currentPlan: state.currentPlan,
         weeklyPlans: state.weeklyPlans,
         tasks: state.tasks,
         vision: state.vision,
       }),
+      // Skip hydration for loading states and errors
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Reset loading and error states on rehydration
+          state.isLoading = false;
+          state.error = null;
+          state.loadingTasks = new Set<string>();
+        }
+      },
     }
   )
 );

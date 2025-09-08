@@ -42,7 +42,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, description, completed, priority, category, frequency, lastCompleted } = body;
+    const { title, description, completed, priority, category, frequency, lastCompleted, completionCount } = body;
 
     const task = await prisma.task.update({
       where: { id },
@@ -56,6 +56,7 @@ export async function PUT(
         ...(lastCompleted !== undefined && {
           lastCompleted: lastCompleted === null ? null : lastCompleted
         }),
+        ...(completionCount !== undefined && { completionCount }),
       },
     });
 
