@@ -50,9 +50,17 @@ export function WeeklyOverview({
     const selectedPlan = weeklyPlans.find(plan => plan.weekNumber === selectedWeek);
     if (!selectedPlan) return [];
 
-    return tasks.filter(task =>
-      selectedPlan.tasks.some((planTask: any) => planTask.id === task.id)
-    );
+    // Only include recurring tasks for the current week
+    const isCurrentWeek = selectedWeek === currentWeek;
+
+    return tasks.filter(task => {
+      if (task.taskType === 'week_specific') {
+        return selectedPlan.tasks.some((planTask: any) => planTask.id === task.id);
+      } else {
+        // Only include recurring tasks for the current week
+        return task.taskType === 'recurring' && isCurrentWeek;
+      }
+    });
   };
 
   const selectedWeekTasks = getSelectedWeekTasks();
@@ -93,13 +101,19 @@ export function WeeklyOverview({
               className="grid grid-cols-1 md:grid-cols-4 gap-6"
             >
               {weeklyPlans.map((plan, index) => {
-                const weekTasks = tasks.filter(task =>
-                  plan.tasks.some((planTask: any) => planTask.id === task.id)
-                );
+                // Only include recurring tasks for the current week
+                const isCurrentWeek = plan.weekNumber === currentWeek;
+                const weekTasks = tasks.filter(task => {
+                  if (task.taskType === 'week_specific') {
+                    return plan.tasks.some((planTask: any) => planTask.id === task.id);
+                  } else {
+                    // Only include recurring tasks for the current week
+                    return task.taskType === 'recurring' && isCurrentWeek;
+                  }
+                });
 
                 // Use weighted completion calculation
                 const { completionPercentage: weekProgress } = calculateWeightedCompletion(weekTasks);
-                const isCurrentWeek = plan.weekNumber === currentWeek;
 
                 return (
                   <motion.div

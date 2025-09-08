@@ -117,9 +117,17 @@ export default function Dashboard() {
     const selectedPlan = weeklyPlans.find(plan => plan.weekNumber === selectedWeek);
     if (!selectedPlan) return [];
 
-    return tasks.filter(task =>
-      selectedPlan.tasks.some(planTask => planTask.id === task.id)
-    );
+    // Only include recurring tasks for the current week
+    const isCurrentWeek = selectedWeek === currentWeek;
+
+    return tasks.filter(task => {
+      if (task.taskType === 'week_specific') {
+        return selectedPlan.tasks.some(planTask => planTask.id === task.id);
+      } else {
+        // Only include recurring tasks for the current week
+        return task.taskType === 'recurring' && isCurrentWeek;
+      }
+    });
   };
 
   const selectedWeekTasks = getSelectedWeekTasks();

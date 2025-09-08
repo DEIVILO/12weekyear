@@ -5,6 +5,7 @@ import { TrendingUp, Target, Calendar, CheckCircle2, Clock, Star } from 'lucide-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { calculateWeightedCompletion } from '@/store/useStore';
 
 interface OverviewCardsProps {
   overallProgress: number;
@@ -30,15 +31,14 @@ const cardVariants = {
     y: 0,
     scale: 1,
     transition: {
-      duration: 0.5,
-      ease: "easeOut"
+      duration: 0.5
     }
   }
 };
 
 export function OverviewCards({ overallProgress, currentWeek, tasks }: OverviewCardsProps) {
-  const completedTasks = tasks.filter(t => t.completed).length;
-  const totalTasks = tasks.length;
+  // Use weighted completion calculation for consistency
+  const { completionPercentage, completedTasks, totalTasks, totalWeight, completedWeight } = calculateWeightedCompletion(tasks);
 
   return (
     <motion.div
@@ -82,16 +82,16 @@ export function OverviewCards({ overallProgress, currentWeek, tasks }: OverviewC
               transition={{ duration: 0.6, delay: 0.8 }}
               className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent"
             >
-              {Math.round(overallProgress)}%
+              {Math.round(completionPercentage)}%
             </motion.div>
             <p className="text-sm text-muted-foreground mb-3">
-              {completedTasks} of {totalTasks} tasks completed
+              {Math.round(completedWeight)} of {Math.round(totalWeight)} weight completed ({completedTasks} of {totalTasks} tasks)
             </p>
             <Progress
-              value={overallProgress}
+              value={completionPercentage}
               className={`h-3 ${
-                overallProgress >= 80 ? 'progress-success' :
-                overallProgress >= 60 ? 'progress-warning' :
+                completionPercentage >= 80 ? 'progress-success' :
+                completionPercentage >= 60 ? 'progress-warning' :
                 'progress-info'
               }`}
             />
@@ -107,11 +107,11 @@ export function OverviewCards({ overallProgress, currentWeek, tasks }: OverviewC
               <motion.div
                 whileHover={{ rotate: 15, scale: 1.1 }}
                 className={`p-2 rounded-lg ${
-                  overallProgress >= 80 ? 'bg-green-100 dark:bg-green-900/30' :
+                  completionPercentage >= 80 ? 'bg-green-100 dark:bg-green-900/30' :
                   'bg-gray-100 dark:bg-gray-900/30'
                 }`}
               >
-                {overallProgress >= 80 ? (
+                {completionPercentage >= 80 ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 ) : (
                   <Clock className="h-5 w-5 text-gray-600" />
@@ -133,7 +133,7 @@ export function OverviewCards({ overallProgress, currentWeek, tasks }: OverviewC
               transition={{ duration: 0.6, delay: 0.9 }}
               className="text-3xl font-bold mb-2"
             >
-              {overallProgress >= 80 ? (
+              {completionPercentage >= 80 ? (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -150,9 +150,9 @@ export function OverviewCards({ overallProgress, currentWeek, tasks }: OverviewC
               )}
             </motion.div>
             <p className="text-sm text-muted-foreground">
-              {overallProgress >= 80
+              {completionPercentage >= 80
                 ? 'Congratulations! Week successful!'
-                : `${Math.max(0, 80 - Math.round(overallProgress))}% more for success`
+                : `${Math.max(0, 80 - Math.round(completionPercentage))}% more for success`
               }
             </p>
           </CardContent>

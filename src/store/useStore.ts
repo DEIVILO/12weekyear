@@ -340,26 +340,39 @@ export const useStore = create<StoreState>()(
             body: JSON.stringify(updates),
           });
 
-          // Update local state
+          // Update local state first
           set((state) => {
             const updatedTasks = state.tasks.map((task) =>
               task.id === id ? updatedTask : task
             );
 
             // Update weekly plan completion when task is toggled
-            const weeklyPlan = state.weeklyPlans.find(plan =>
-              plan.tasks.some(t => t.id === id) || // Week-specific tasks
-              (updatedTask.taskType === 'recurring' && plan.weekNumber === getCurrentWeekNumber()) // Recurring tasks for current week
-            );
+            // Find the weekly plan that contains this task
+            let weeklyPlanToUpdate = null;
+            let weeklyPlanId = null;
 
-            if (weeklyPlan) {
-              // Get all tasks for this week (both recurring and week-specific)
+            // For week-specific tasks, use the task's weeklyPlanId
+            if (updatedTask.taskType === 'week_specific' && updatedTask.weeklyPlanId) {
+              weeklyPlanToUpdate = state.weeklyPlans.find(plan => plan.id === updatedTask.weeklyPlanId);
+              weeklyPlanId = updatedTask.weeklyPlanId;
+            } else if (updatedTask.taskType === 'recurring') {
+              // For recurring tasks, find the current week's plan
+              // Get current week number relative to the 12-week plan start date
+              const currentWeekPlan = state.weeklyPlans.find(plan => {
+                const now = new Date();
+                return now >= plan.startDate && now <= plan.endDate;
+              });
+              weeklyPlanToUpdate = currentWeekPlan;
+              weeklyPlanId = currentWeekPlan?.id;
+            }
+
+            if (weeklyPlanToUpdate && weeklyPlanId) {
+              // Get all tasks for this weekly plan
               const weeklyTasks = updatedTasks.filter(task => {
                 if (task.taskType === 'week_specific') {
-                  // Include week-specific tasks that belong to this plan
-                  return weeklyPlan.tasks.some(wt => wt.id === task.id);
+                  return task.weeklyPlanId === weeklyPlanId;
                 } else {
-                  // Include recurring tasks for the current week
+                  // Include all recurring tasks for this week's calculation
                   return task.taskType === 'recurring';
                 }
               });
@@ -369,19 +382,21 @@ export const useStore = create<StoreState>()(
               let completedWeight = 0;
 
               for (const task of weeklyTasks) {
+                const weight = calculateTaskWeight(task.frequency || 'weekly');
+                totalWeight += weight;
+
                 if (task.taskType === 'recurring') {
                   // For recurring tasks, use completion progress
-                  const progressRatio = task.completionCount / task.completionTarget;
-                  const weight = calculateTaskWeight(task.frequency || 'weekly');
-                  totalWeight += weight;
-                  completedWeight += weight * Math.min(progressRatio, 1); // Cap at 100%
+                  const progressRatio = Math.min(task.completionCount / task.completionTarget, 1);
+                  completedWeight += weight * progressRatio;
+                  console.log(`🔄 Recurring task "${task.title}": ${task.completionCount}/${task.completionTarget} = ${progressRatio.toFixed(2)} * ${weight} = ${(weight * progressRatio).toFixed(2)} weight`);
                 } else {
                   // For week-specific tasks, use binary completion
-                  const weight = calculateTaskWeight(task.frequency || 'weekly');
-                  totalWeight += weight;
-
                   if (task.completed) {
                     completedWeight += weight;
+                    console.log(`✅ Week-specific task "${task.title}": completed = ${weight} weight`);
+                  } else {
+                    console.log(`❌ Week-specific task "${task.title}": not completed = 0 weight`);
                   }
                 }
               }
@@ -389,8 +404,10 @@ export const useStore = create<StoreState>()(
               const completionPercentage = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
               const isSuccessful = completionPercentage >= 80;
 
+              console.log(`📊 Weekly plan ${weeklyPlanId} updated: ${completionPercentage.toFixed(1)}% (${completedWeight.toFixed(1)}/${totalWeight.toFixed(1)} weight)`);
+
               const updatedWeeklyPlans = state.weeklyPlans.map(plan =>
-                plan.id === weeklyPlan.id
+                plan.id === weeklyPlanId
                   ? { ...plan, completionPercentage, isSuccessful, updatedAt: new Date() }
                   : plan
               );
@@ -403,6 +420,74 @@ export const useStore = create<StoreState>()(
 
             return { tasks: updatedTasks };
           });
+
+          // Update the weekly plan in the database asynchronously
+          const currentState = get();
+          const taskAfterUpdate = currentState.tasks.find(t => t.id === id);
+          if (taskAfterUpdate) {
+            let weeklyPlanId = null;
+
+            // Find the weekly plan ID
+            if (taskAfterUpdate.taskType === 'week_specific' && taskAfterUpdate.weeklyPlanId) {
+              weeklyPlanId = taskAfterUpdate.weeklyPlanId;
+            } else if (taskAfterUpdate.taskType === 'recurring') {
+              const currentWeekPlan = currentState.weeklyPlans.find(plan => {
+                const now = new Date();
+                return now >= plan.startDate && now <= plan.endDate;
+              });
+              weeklyPlanId = currentWeekPlan?.id;
+            }
+
+            if (weeklyPlanId) {
+              // Get all tasks for this weekly plan to calculate completion
+              const weeklyTasks = currentState.tasks.filter(task => {
+                if (task.taskType === 'week_specific') {
+                  return task.weeklyPlanId === weeklyPlanId;
+                } else {
+                  return task.taskType === 'recurring';
+                }
+              });
+
+              // Calculate weighted completion
+              let totalWeight = 0;
+              let completedWeight = 0;
+
+              for (const task of weeklyTasks) {
+                const weight = calculateTaskWeight(task.frequency || 'weekly');
+                totalWeight += weight;
+
+                if (task.taskType === 'recurring') {
+                  const progressRatio = Math.min(task.completionCount / task.completionTarget, 1);
+                  completedWeight += weight * progressRatio;
+                  console.log(`🔄 [DB] Recurring task "${task.title}": ${task.completionCount}/${task.completionTarget} = ${progressRatio.toFixed(2)} * ${weight} = ${(weight * progressRatio).toFixed(2)} weight`);
+                } else {
+                  if (task.completed) {
+                    completedWeight += weight;
+                    console.log(`✅ [DB] Week-specific task "${task.title}": completed = ${weight} weight`);
+                  } else {
+                    console.log(`❌ [DB] Week-specific task "${task.title}": not completed = 0 weight`);
+                  }
+                }
+              }
+
+              const completionPercentage = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
+              const isSuccessful = completionPercentage >= 80;
+
+              // Update the weekly plan in the database
+              try {
+                await apiRequest(`/weekly-plans/${weeklyPlanId}`, {
+                  method: 'PUT',
+                  body: JSON.stringify({
+                    completionPercentage,
+                    isSuccessful,
+                  }),
+                });
+                console.log(`💾 Weekly plan ${weeklyPlanId} saved to database`);
+              } catch (dbError) {
+                console.error('Failed to update weekly plan in database:', dbError);
+              }
+            }
+          }
         } catch (error) {
           set({ error: error instanceof Error ? error.message : 'Failed to toggle task' });
         } finally {
@@ -655,9 +740,20 @@ export const calculateWeightedCompletion = (tasks: Task[]) => {
     const weight = calculateTaskWeight(task.frequency || 'weekly');
     totalWeight += weight;
 
-    if (task.completed) {
-      completedWeight += weight;
-      completedTasks += 1;
+    if (task.taskType === 'recurring') {
+      // For recurring tasks, use completion progress ratio
+      const progressRatio = Math.min(task.completionCount / task.completionTarget, 1);
+      completedWeight += weight * progressRatio;
+      // Count as completed if progress ratio >= 1
+      if (progressRatio >= 1) {
+        completedTasks += 1;
+      }
+    } else {
+      // For week-specific tasks, use binary completion
+      if (task.completed) {
+        completedWeight += weight;
+        completedTasks += 1;
+      }
     }
   }
 
@@ -687,8 +783,15 @@ export const useTaskCompletion = (tasks: Task[]) => {
     const weight = calculateTaskWeight(task.frequency || 'weekly');
     totalWeight += weight;
 
-    if (task.completed) {
-      completedWeight += weight;
+    if (task.taskType === 'recurring') {
+      // For recurring tasks, use completion progress ratio
+      const progressRatio = Math.min(task.completionCount / task.completionTarget, 1);
+      completedWeight += weight * progressRatio;
+    } else {
+      // For week-specific tasks, use binary completion
+      if (task.completed) {
+        completedWeight += weight;
+      }
     }
   }
 
